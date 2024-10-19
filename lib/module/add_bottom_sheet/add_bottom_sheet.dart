@@ -1,6 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:todo_c12/model/todo_dm.dart';
+import 'package:todo_c12/providers/list_provider.dart';
 import 'package:todo_c12/utils/extensions/date_time_extensions.dart';
 
 class AddBottomSheet extends StatefulWidget {
@@ -14,9 +16,11 @@ class _AddBottomSheetState extends State<AddBottomSheet> {
   DateTime selectedDate = DateTime.now();
   TextEditingController titleController = TextEditingController();
   TextEditingController descriptionController = TextEditingController();
+  late ListProvider provider;
 
   @override
   Widget build(BuildContext context) {
+    provider = Provider.of(context);
     return Container(
       height: MediaQuery.of(context).size.height * .5,
       padding: const EdgeInsets.all(16.0),
@@ -28,14 +32,14 @@ class _AddBottomSheetState extends State<AddBottomSheet> {
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 24),
           ),
-           TextField(
+          TextField(
             controller: titleController,
             decoration: InputDecoration(labelText: "Title"),
           ),
           const SizedBox(
             height: 12,
           ),
-           TextField(
+          TextField(
             controller: descriptionController,
             decoration: InputDecoration(labelText: "Description"),
           ),
@@ -55,7 +59,7 @@ class _AddBottomSheetState extends State<AddBottomSheet> {
                 showMyDatePicker();
               },
               child: Text(
-                 selectedDate.toFormattedDate(),
+                selectedDate.toFormattedDate(),
                 textAlign: TextAlign.center,
               )),
           const Spacer(),
@@ -83,20 +87,26 @@ class _AddBottomSheetState extends State<AddBottomSheet> {
         selectedDate;
   }
 
-  void addTodoToFirestore() {
-   CollectionReference todosCollection =
+  void addTodoToFirestore() async {
+    CollectionReference todosCollection =
         FirebaseFirestore.instance.collection(TodoDM.collectionName);
 
-   DocumentReference newDocument = todosCollection.doc(); ///Creates an empty document
+    DocumentReference newDocument = todosCollection.doc();
 
-   TodoDM todoDM = TodoDM(id: newDocument.id,
-       title: titleController.text,
-       description: descriptionController.text,
-       date: selectedDate,
-       isDone: false);
-    newDocument.set(todoDM.toJson());
+    ///Creates an empty document
+
+    TodoDM todoDM = TodoDM(
+        id: newDocument.id,
+        title: titleController.text,
+        description: descriptionController.text,
+        date: selectedDate,
+        isDone: false);
+
+    newDocument.set(todoDM.toJson()).timeout(Duration(milliseconds: 500),
+        onTimeout: () {
+      provider.getTodosFromFirestore();
+    });
     Navigator.pop(context);
- //  todosCollection.add(todoDM.toJson());
+    //  todosCollection.add(todoDM.toJson());
   }
 }
-
